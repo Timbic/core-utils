@@ -1,7 +1,7 @@
 autoDedupe: true
 
 saveExact: true
-nodeVersion: "22.22.2"
+nodeVersion: 24.22.1
 
 publicHoistPattern:
     - eslint
