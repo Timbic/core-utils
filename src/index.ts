@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import mri from "mri";
+import * as prompts from "@clack/prompts";
 
 const HELP_MESSAGE = `Help me!!!`;
 
@@ -34,28 +35,51 @@ async function init() {
 
 	const isInteractive = args.interactive ?? process.stdin.isTTY;
 
-	if (isInteractive) {
-		// use @clack/prompts
+	// mri gives string flags "" when they have no value.
+	function parseTemplateOption(value?: string): boolean | string | string[] | undefined {
+		if (value === undefined || typeof value === "boolean") return value;
+		if (value === "") return true;
+		if (value === "true") return true;
+		if (value === "false") return false;
+		return value.includes(",") ? value.split(",") : value;
 	}
 
-	if (args.prettier) {
-		// handle prettier
-		createConfigFile("prettier", "i love prettier");
+	let prettierOption = parseTemplateOption(args.prettier);
+	if (prettierOption === true) {
+		if (isInteractive) {
+			const result = await prompts.multiselect({
+				message: "Select plugins to include:",
+				options: [{ value: "oxc" }, { value: "tailwind" }],
+			});
+			if (prompts.isCancel(result)) {
+				return prompts.cancel("Operation cancelled");
+			}
+			prettierOption = result;
+		}
+	} else if (prettierOption) {
+		prettierOption = Array.isArray(prettierOption) ? prettierOption : [prettierOption];
 	}
+	console.log(prettierOption);
 
-	if (args.eslint) {
+	const eslintOption = parseTemplateOption(args.eslint);
+	if (eslintOption) {
 		// handle eslint
 	}
 
-	if (args.stylelint) {
+	const stylelintOption = parseTemplateOption(args.stylelint);
+	if (stylelintOption) {
 		// handle stylelint
 	}
 
-	if (args.husky) {
+	const huskyOption = parseTemplateOption(args.husky);
+	if (huskyOption) {
 		// handle husky and lint-staged
 	}
 
 	// rest of the stuff
+	if (huskyOption) {
+		createConfigFile("love cli's", "aboba");
+	}
 }
 
 init().catch((e) => {
