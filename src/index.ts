@@ -2,30 +2,19 @@ import fs from "node:fs";
 import path from "node:path";
 import mri from "mri";
 import * as prompts from "@clack/prompts";
-import { PRETTIER_PLUGINS } from "./utils.ts";
-
-const HELP_MESSAGE = `Help me!!!`;
-
-const cwd = process.cwd();
-
-// add more utils functions to handle file writing, etc.
-
-function createConfigFile(name: string, value: string) {
-	const file = path.join(cwd, name);
-	fs.writeFileSync(file, value);
-}
+import { HELP_MESSAGE, PRETTIER_PLUGINS } from "./utils.ts";
 
 // Arguments from cli
 const args = mri<{
 	prettier?: string;
 	eslint?: string;
 	stylelint?: string;
-	husky?: string;
+	husky?: boolean;
 	help?: boolean;
 	interactive?: boolean;
 }>(process.argv.slice(2), {
-	string: ["prettier", "eslint", "stylelint", "husky"],
-	boolean: ["interactive", "help"],
+	string: ["prettier", "eslint", "stylelint"],
+	boolean: ["husky", "interactive", "help"],
 	alias: { h: "help" },
 });
 
@@ -85,23 +74,49 @@ async function init() {
 	}
 	console.log(prettierOption);
 
-	const eslintOption = parseToolingOption(args.eslint);
-	if (eslintOption) {
-		// handle eslint
+	let eslintOption = parseToolingOption(args.eslint);
+	// No ESLint plugins/values yet — any supplied value just means "enable" (remove once added).
+	if (typeof eslintOption === "string" || Array.isArray(eslintOption)) {
+		eslintOption = true;
 	}
-
-	const stylelintOption = parseToolingOption(args.stylelint);
-	if (stylelintOption) {
-		// handle stylelint
+	if (eslintOption === undefined && isInteractive) {
+		const result = await prompts.confirm({
+			message: "Add ESLint?",
+		});
+		if (prompts.isCancel(result)) {
+			return prompts.cancel("Operation cancelled");
+		}
+		eslintOption = result;
 	}
+	console.log(eslintOption);
 
-	const huskyOption = parseToolingOption(args.husky);
-	if (huskyOption) {
-		// handle husky and lint-staged
+	let stylelintOption = parseToolingOption(args.stylelint);
+	// No Stylelint plugins/values yet — any supplied value just means "enable" (remove once added).
+	if (typeof stylelintOption === "string" || Array.isArray(stylelintOption)) {
+		stylelintOption = true;
+	}
+	if (stylelintOption === undefined && isInteractive) {
+		const result = await prompts.confirm({
+			message: "Add Stylelint?",
+		});
+		if (prompts.isCancel(result)) {
+			return prompts.cancel("Operation cancelled");
+		}
+		stylelintOption = result;
+	}
+	console.log(stylelintOption);
+
+	const cwd = process.cwd();
+
+	// add more utils functions to handle file writing, etc.
+
+	function createConfigFile(name: string, value: string) {
+		const file = path.join(cwd, name);
+		fs.writeFileSync(file, value);
 	}
 
 	// rest of the stuff
-	if (huskyOption) {
+	if (args.husky) {
 		createConfigFile("love cli's", "aboba");
 	}
 }

@@ -28,4 +28,6 @@ const PRETTIER_PLUGINS: Plugin[] = Object.entries(PLUGIN_COLORS).map(([name, col
 	color,
 }));
 
-export { COLORS, PRETTIER_PLUGINS };
+const HELP_MESSAGE = `Help me!!!`;
+
+export { COLORS, PRETTIER_PLUGINS, HELP_MESSAGE };
