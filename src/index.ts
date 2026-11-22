@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { parseArgs } from "node:util";
+import mri from "mri";
 
 const HELP_MESSAGE = `Help me!!!`;
 
@@ -13,39 +13,51 @@ function createConfigFile(name: string, value: string) {
 	fs.writeFileSync(file, value);
 }
 
-async function init() {
-	// replace with mri
-	const args = parseArgs();
+const args = mri<{
+	prettier?: string;
+	eslint?: string;
+	stylelint?: string;
+	husky?: string;
+	help?: boolean;
+	interactive?: boolean;
+}>(process.argv.slice(2), {
+	string: ["prettier", "eslint", "stylelint", "husky"],
+	boolean: ["interactive", "help"],
+	alias: { h: "help" },
+});
 
-	if (args.values.help) {
+async function init() {
+	if (args.help) {
 		console.log(HELP_MESSAGE);
 		return;
 	}
 
-	if (args.values.interactive) {
-		// work in interactive mode (@clack/prompts)
+	const isInteractive = args.interactive ?? process.stdin.isTTY;
+
+	if (isInteractive) {
+		// use @clack/prompts
 	}
 
-	if (args.values.prettier) {
+	if (args.prettier) {
 		// handle prettier
 		createConfigFile("prettier", "i love prettier");
 	}
 
-	if (args.values.eslint) {
+	if (args.eslint) {
 		// handle eslint
 	}
 
-	if (args.values.stylelint) {
+	if (args.stylelint) {
 		// handle stylelint
 	}
 
-	if (args.values.husky) {
+	if (args.husky) {
 		// handle husky and lint-staged
 	}
 
 	// rest of the stuff
 }
 
-init().catch((err) => {
-	console.log(err);
+init().catch((e) => {
+	console.error(e);
 });
