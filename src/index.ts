@@ -28,12 +28,12 @@ async function init() {
 	const isInteractive = args.interactive ?? process.stdin.isTTY;
 
 	// mri gives string flags "" when they have no value.
-	function parseToolingOption(value?: string): boolean | string | string[] | undefined {
+	function parseToolingOption(value?: string) {
 		if (value === undefined || typeof value === "boolean") return value;
 		if (value === "") return true;
 		if (value === "true") return true;
 		if (value === "false") return false;
-		return value.includes(",") ? value.split(",") : value;
+		return value.includes(",") ? value.split(",") : [value];
 	}
 
 	let prettierOption = parseToolingOption(args.prettier);
@@ -69,16 +69,13 @@ async function init() {
 			}
 			prettierOption = result;
 		}
-	} else if (prettierOption) {
-		prettierOption = Array.isArray(prettierOption) ? prettierOption : [prettierOption];
 	}
 	console.log(prettierOption);
 
 	let eslintOption = parseToolingOption(args.eslint);
 	// No ESLint plugins/values yet — any supplied value just means "enable" (remove once added).
-	if (typeof eslintOption === "string" || Array.isArray(eslintOption)) {
-		eslintOption = true;
-	}
+	if (Array.isArray(eslintOption)) eslintOption = true;
+
 	if (eslintOption === undefined && isInteractive) {
 		const result = await prompts.confirm({
 			message: "Add ESLint?",
@@ -92,9 +89,8 @@ async function init() {
 
 	let stylelintOption = parseToolingOption(args.stylelint);
 	// No Stylelint plugins/values yet — any supplied value just means "enable" (remove once added).
-	if (typeof stylelintOption === "string" || Array.isArray(stylelintOption)) {
-		stylelintOption = true;
-	}
+	if (Array.isArray(stylelintOption)) stylelintOption = true;
+
 	if (stylelintOption === undefined && isInteractive) {
 		const result = await prompts.confirm({
 			message: "Add Stylelint?",
@@ -106,14 +102,43 @@ async function init() {
 	}
 	console.log(stylelintOption);
 
-	const cwd = process.cwd();
+	const targetDir = "custom-test";
 
-	// add more utils functions to handle file writing, etc.
+	// writing files
+
+	const cwd = process.cwd();
+	const root = path.join(cwd, targetDir);
+	fs.mkdirSync(root, { recursive: true });
+	prompts.log.step(`Scaffolding instruments in ${root}...`);
 
 	function createConfigFile(name: string, value: string) {
-		const file = path.join(cwd, name);
+		const file = path.join(root, name);
 		fs.writeFileSync(file, value);
 	}
+
+	if (prettierOption) {
+		const configOptions =
+			prettierOption === true || prettierOption.length === 0
+				? ""
+				: `{}, { ${prettierOption.map((name) => `${name}: true`).join(", ")} }`;
+		const prettierConfig = `import withTimbic from "@timbic/prettier-config";\n\nexport default withTimbic(${configOptions});\n`;
+
+		createConfigFile("prettier.config.ts", prettierConfig);
+	}
+
+	if (eslintOption) {
+		const eslintConfig = `import withTimbic from "@timbic/eslint-config";\n\nexport default withTimbic();\n`;
+
+		createConfigFile("eslint.config.ts", eslintConfig);
+	}
+
+	if (stylelintOption) {
+		const stylelintConfig = `import withTimbic from "@timbic/stylelint-config";\n\nexport default withTimbic();\n`;
+
+		createConfigFile("stylelint.config.ts", stylelintConfig);
+	}
+
+	// add more utils functions to handle file writing, etc.
 
 	// rest of the stuff
 	if (args.husky) {
