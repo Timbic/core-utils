@@ -1,4 +1,6 @@
+import cp from "node:child_process";
 import fs from "node:fs";
+import url from "node:url";
 import path from "node:path";
 import mri from "mri";
 import * as prompts from "@clack/prompts";
@@ -102,6 +104,18 @@ async function init() {
 	}
 	console.log(stylelintOption);
 
+	let huskyOption = args.husky;
+	if (huskyOption === undefined && isInteractive) {
+		const result = await prompts.confirm({
+			message: "Add Husky + lint-staged?",
+		});
+		if (prompts.isCancel(result)) {
+			return prompts.cancel("Operation cancelled");
+		}
+		huskyOption = result;
+	}
+	console.log(huskyOption);
+
 	const targetDir = "custom-test";
 
 	// writing files
@@ -109,6 +123,11 @@ async function init() {
 	const cwd = process.cwd();
 	const root = path.join(cwd, targetDir);
 	fs.mkdirSync(root, { recursive: true });
+
+	const packageJsonPath = path.join(root, "package.json");
+	const initialPackageJson = { name: targetDir, version: "0.0.0", private: true };
+	fs.writeFileSync(packageJsonPath, `${JSON.stringify(initialPackageJson, null, "\t")}\n`);
+
 	prompts.log.step(`Scaffolding instruments in ${root}...`);
 
 	function createConfigFile(name: string, value: string) {
@@ -141,8 +160,31 @@ async function init() {
 	// add more utils functions to handle file writing, etc.
 
 	// rest of the stuff
-	if (args.husky) {
-		createConfigFile("love cli's", "aboba");
+	if (huskyOption) {
+		const huskyBin = url.fileURLToPath(new URL("bin.js", import.meta.resolve("husky")));
+		cp.execFileSync(process.execPath, [huskyBin, "init"], { cwd: root, stdio: "inherit" });
+
+		const huskyDir = path.join(root, ".husky");
+		fs.mkdirSync(huskyDir, { recursive: true });
+		fs.writeFileSync(path.join(huskyDir, "pre-commit"), "lint-staged\n", { mode: 0o755 });
+
+		const pluginExtensions: Record<string, string[]> = { yaml: ["yaml", "yml"], astro: ["astro"] };
+		const extensions = new Set(["js", "ts", "md", "json"]);
+		if (Array.isArray(prettierOption)) {
+			for (const plugin of prettierOption) pluginExtensions[plugin]?.forEach((ext) => extensions.add(ext));
+		}
+
+		const lintStaged: Record<string, string[]> = {
+			...(prettierOption ? { [`*.{${[...extensions].join(",")}}`]: ["prettier --write"] } : {}),
+			...(eslintOption ? { "*.{js,ts}": ["eslint --fix"] } : {}),
+			...(stylelintOption ? { "*.{css,vue}": ["stylelint --fix"] } : {}),
+		};
+
+		if (Object.keys(lintStaged).length) {
+			const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as Record<string, unknown>;
+			packageJson["lint-staged"] = lintStaged;
+			fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, "\t")}\n`);
+		}
 	}
 }
 
