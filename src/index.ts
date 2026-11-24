@@ -22,12 +22,18 @@ const args = mri<{
 
 // Main function
 async function init() {
-	if (args.help) {
-		console.log(HELP_MESSAGE);
-		return;
-	}
+	if (args.help) return console.log(HELP_MESSAGE);
 
 	const isInteractive = args.interactive ?? process.stdin.isTTY;
+
+	function cancel() {
+		return prompts.cancel("Operation cancelled");
+	}
+
+	async function ask(message: string) {
+		const result = await prompts.confirm({ message });
+		return prompts.isCancel(result) ? cancel() : result;
+	}
 
 	// 1. Get target dir
 	function formatTargetDir(targetDir: string) {
@@ -49,9 +55,7 @@ async function init() {
 			placeholder: ".",
 			validate: (value) => (value && fs.existsSync(formatTargetDir(value)) ? undefined : "Directory does not exist"),
 		});
-		if (prompts.isCancel(result)) {
-			return prompts.cancel("Operation cancelled");
-		}
+		if (prompts.isCancel(result)) return cancel();
 		targetDir = formatTargetDir(result);
 	}
 
@@ -68,9 +72,8 @@ async function init() {
 
 	// mri gives string flags "" when they have no value.
 	function parseToolingOption(value?: string) {
-		if (value === undefined || typeof value === "boolean") return value;
-		if (value === "") return true;
-		if (value === "true") return true;
+		if (value === undefined) return value;
+		if (value === "" || value === "true") return true;
 		if (value === "false") return false;
 		return value.includes(",") ? value.split(",") : [value];
 	}
@@ -81,33 +84,25 @@ async function init() {
 	const requested = [prettierOption].flat().filter((value): value is string => typeof value === "string");
 	const invalidPlugins = requested.filter((name) => !names.includes(name));
 
-	if (invalidPlugins.length > 0) {
+	if (invalidPlugins.length) {
 		prompts.log.warn(`"${invalidPlugins.join(", ")}" isn't a valid Prettier plugin.`);
 		prettierOption = true;
 	}
 
 	if (prettierOption === undefined && isInteractive) {
-		const result = await prompts.confirm({
-			message: "Add Prettier?",
-		});
-		if (prompts.isCancel(result)) {
-			return prompts.cancel("Operation cancelled");
-		}
+		const result = await ask("Add Prettier?");
+		if (result === undefined) return;
 		prettierOption = result;
 	}
 
-	if (prettierOption === true) {
-		if (isInteractive) {
-			const result = await prompts.multiselect({
-				message: "Select plugins to include:",
-				options: PRETTIER_PLUGINS.map((plugin) => ({ value: plugin.name, label: plugin.color(plugin.name) })),
-				required: false,
-			});
-			if (prompts.isCancel(result)) {
-				return prompts.cancel("Operation cancelled");
-			}
-			prettierOption = result;
-		}
+	if (prettierOption === true && isInteractive) {
+		const result = await prompts.multiselect({
+			message: "Select plugins to include:",
+			options: PRETTIER_PLUGINS.map((plugin) => ({ value: plugin.name, label: plugin.color(plugin.name) })),
+			required: false,
+		});
+		if (prompts.isCancel(result)) return cancel();
+		prettierOption = result;
 	}
 
 	let eslintOption = parseToolingOption(args.eslint);
@@ -115,12 +110,8 @@ async function init() {
 	if (Array.isArray(eslintOption)) eslintOption = true;
 
 	if (eslintOption === undefined && isInteractive) {
-		const result = await prompts.confirm({
-			message: "Add ESLint?",
-		});
-		if (prompts.isCancel(result)) {
-			return prompts.cancel("Operation cancelled");
-		}
+		const result = await ask("Add ESLint?");
+		if (result === undefined) return;
 		eslintOption = result;
 	}
 
@@ -129,12 +120,8 @@ async function init() {
 	if (Array.isArray(stylelintOption)) stylelintOption = true;
 
 	if (stylelintOption === undefined && isInteractive) {
-		const result = await prompts.confirm({
-			message: "Add Stylelint?",
-		});
-		if (prompts.isCancel(result)) {
-			return prompts.cancel("Operation cancelled");
-		}
+		const result = await ask("Add Stylelint?");
+		if (result === undefined) return;
 		stylelintOption = result;
 	}
 
@@ -142,15 +129,10 @@ async function init() {
 
 	let huskyOption = args.husky;
 	if (huskyOption === undefined && isInteractive) {
-		const result = await prompts.confirm({
-			message: "Add Husky + lint-staged?",
-		});
-		if (prompts.isCancel(result)) {
-			return prompts.cancel("Operation cancelled");
-		}
+		const result = await ask("Add Husky + lint-staged?");
+		if (result === undefined) return;
 		huskyOption = result;
 	}
-	console.log(huskyOption);
 
 	// 5. Create the files
 	prompts.log.step(`Scaffolding instruments in ${root}...`);
@@ -160,27 +142,20 @@ async function init() {
 		fs.writeFileSync(file, value);
 	}
 
+	function writeConfig(name: string, options = "") {
+		const config = `import withTimbic from "@timbic/${name}-config";\n\nexport default withTimbic(${options});\n`;
+		createConfigFile(`${name}.config.ts`, config);
+	}
+
 	if (prettierOption) {
-		const configOptions =
-			prettierOption === true || prettierOption.length === 0
-				? ""
-				: `{}, { ${prettierOption.map((name) => `${name}: true`).join(", ")} }`;
-		const prettierConfig = `import withTimbic from "@timbic/prettier-config";\n\nexport default withTimbic(${configOptions});\n`;
-
-		createConfigFile("prettier.config.ts", prettierConfig);
+		const plugins = Array.isArray(prettierOption) ? prettierOption : [];
+		const options = plugins.length ? `{}, { ${plugins.map((name) => `${name}: true`).join(", ")} }` : "";
+		writeConfig("prettier", options);
 	}
 
-	if (eslintOption) {
-		const eslintConfig = `import withTimbic from "@timbic/eslint-config";\n\nexport default withTimbic();\n`;
+	if (eslintOption) writeConfig("eslint");
 
-		createConfigFile("eslint.config.ts", eslintConfig);
-	}
-
-	if (stylelintOption) {
-		const stylelintConfig = `import withTimbic from "@timbic/stylelint-config";\n\nexport default withTimbic();\n`;
-
-		createConfigFile("stylelint.config.ts", stylelintConfig);
-	}
+	if (stylelintOption) writeConfig("stylelint");
 
 	if (huskyOption) {
 		const huskyBin = url.fileURLToPath(new URL("bin.js", import.meta.resolve("husky")));
