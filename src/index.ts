@@ -29,6 +29,43 @@ async function init() {
 
 	const isInteractive = args.interactive ?? process.stdin.isTTY;
 
+	// 1. Get target dir
+	function formatTargetDir(targetDir: string) {
+		return targetDir
+			.trim()
+			.replace(/[<>:"\\|?*]/g, "")
+			.replace(/\/+$/g, "");
+	}
+
+	let targetDir = formatTargetDir(String(args._[0] ?? ""));
+	if (!fs.existsSync(targetDir)) {
+		if (!isInteractive) {
+			prompts.log.error(`Target directory "${targetDir}" does not exist.`);
+			return;
+		}
+		const result = await prompts.text({
+			message: "Target directory",
+			defaultValue: ".",
+			placeholder: ".",
+			validate: (value) => (value && fs.existsSync(formatTargetDir(value)) ? undefined : "Directory does not exist"),
+		});
+		if (prompts.isCancel(result)) {
+			return prompts.cancel("Operation cancelled");
+		}
+		targetDir = formatTargetDir(result);
+	}
+
+	// 2. Check if it has package.json
+	const cwd = process.cwd();
+	const root = path.resolve(cwd, targetDir);
+	const packageJsonPath = path.join(root, "package.json");
+	if (!fs.existsSync(packageJsonPath)) {
+		prompts.log.error(`"${root}" is not a Node.js project (no package.json found).`);
+		return;
+	}
+
+	// 3. Parse and select options for prettier, eslint and stylelint
+
 	// mri gives string flags "" when they have no value.
 	function parseToolingOption(value?: string) {
 		if (value === undefined || typeof value === "boolean") return value;
@@ -72,7 +109,6 @@ async function init() {
 			prettierOption = result;
 		}
 	}
-	console.log(prettierOption);
 
 	let eslintOption = parseToolingOption(args.eslint);
 	// No ESLint plugins/values yet — any supplied value just means "enable" (remove once added).
@@ -87,7 +123,6 @@ async function init() {
 		}
 		eslintOption = result;
 	}
-	console.log(eslintOption);
 
 	let stylelintOption = parseToolingOption(args.stylelint);
 	// No Stylelint plugins/values yet — any supplied value just means "enable" (remove once added).
@@ -102,7 +137,8 @@ async function init() {
 		}
 		stylelintOption = result;
 	}
-	console.log(stylelintOption);
+
+	// 4. Select option for Husky + lint-staged
 
 	let huskyOption = args.husky;
 	if (huskyOption === undefined && isInteractive) {
@@ -116,18 +152,7 @@ async function init() {
 	}
 	console.log(huskyOption);
 
-	const targetDir = "custom-test";
-
-	// writing files
-
-	const cwd = process.cwd();
-	const root = path.join(cwd, targetDir);
-	fs.mkdirSync(root, { recursive: true });
-
-	const packageJsonPath = path.join(root, "package.json");
-	const initialPackageJson = { name: targetDir, version: "0.0.0", private: true };
-	fs.writeFileSync(packageJsonPath, `${JSON.stringify(initialPackageJson, null, "\t")}\n`);
-
+	// 5. Create the files
 	prompts.log.step(`Scaffolding instruments in ${root}...`);
 
 	function createConfigFile(name: string, value: string) {
@@ -157,9 +182,6 @@ async function init() {
 		createConfigFile("stylelint.config.ts", stylelintConfig);
 	}
 
-	// add more utils functions to handle file writing, etc.
-
-	// rest of the stuff
 	if (huskyOption) {
 		const huskyBin = url.fileURLToPath(new URL("bin.js", import.meta.resolve("husky")));
 		cp.execFileSync(process.execPath, [huskyBin, "init"], { cwd: root, stdio: "inherit" });
@@ -181,9 +203,11 @@ async function init() {
 		};
 
 		if (Object.keys(lintStaged).length) {
-			const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as Record<string, unknown>;
+			const packageJsonText = fs.readFileSync(packageJsonPath, "utf8");
+			const packageJson = JSON.parse(packageJsonText) as Record<string, unknown>;
 			packageJson["lint-staged"] = lintStaged;
-			fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, "\t")}\n`);
+			const indent = /\t/.test(packageJsonText) ? "\t" : 2;
+			fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, indent)}\n`);
 		}
 	}
 }
