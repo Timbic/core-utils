@@ -28,6 +28,28 @@ const PRETTIER_PLUGINS: Plugin[] = Object.entries(PLUGIN_COLORS).map(([name, col
 	color,
 }));
 
-const HELP_MESSAGE = `Help me!!!`;
+// Message for help argument
+function getPluginList(): string {
+	return PRETTIER_PLUGINS.map((plugin) => `  ${plugin.color(plugin.name.padEnd(10))}`).join("\n");
+}
+
+const HELP_MESSAGE = `\
+Usage: core-utils [OPTION]... [DIRECTORY]
+
+Configure Prettier, ESLint, Stylelint and Husky + lint-staged in an existing Node.js project.
+The target directory must already exist and contain a package.json.
+When running in a TTY, the CLI will start in interactive mode.
+
+Options:
+  --prettier [PLUGINS]                  add a Prettier config (comma-separated plugins)
+  --eslint                              add an ESLint config
+  --stylelint                           add a Stylelint config
+  --husky / --no-husky                  add Husky + lint-staged
+  --interactive / --no-interactive      force interactive / non-interactive mode
+  -h, --help                            display this help message
+
+Available Prettier plugins (omit the value to pick interactively):
+${getPluginList()}
+`;
 
 export { COLORS, PRETTIER_PLUGINS, HELP_MESSAGE };
