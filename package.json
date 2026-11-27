@@ -1,7 +1,7 @@
 {
 	"name": "@timbic/core-utils",
 	"type": "module",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"private": false,
 	"description": "Timbic's set of tools used in almost every project",
 	"author": "Timur Bikmuhametov <tim.bic22@gmail.com>",
