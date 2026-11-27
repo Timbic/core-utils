@@ -1,5 +1,11 @@
 # @timbic/core-utils
 
+<p>
+  <a href="https://www.npmjs.com/package/@timbic/core-utils"><img src="https://img.shields.io/npm/v/@timbic/core-utils.svg?logo=nodedotjs" alt="npm package"></a>
+  <a href="https://github.com/Timbic/core-utils"><img src="https://img.shields.io/badge/Github-gray.svg?logo=github" alt="github repo"></a>
+  <a href="https://npmx.dev/package/@timbic/core-utils"><img src="https://img.shields.io/badge/npmx.dev-black?logo=npm" alt="view on npmx"></a>
+</p>
+
 Timbic's toolkit for TypeScript projects: the shared configs and linting tools in one package, plus a CLI that wires them into an existing
 project.
 
