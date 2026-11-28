@@ -1,13 +1,13 @@
-import util from "node:util";
+import { styleText } from "node:util";
 import type { TimbicOptions } from "@timbic/prettier-config";
 
 // Colors for text formatting
-type ColorName = Exclude<Parameters<typeof util.styleText>[0], readonly unknown[]>;
+type ColorName = Exclude<Parameters<typeof styleText>[0], readonly unknown[]>;
 
 function createColors() {
 	return new Proxy({} as Record<ColorName, (text: string) => string>, {
 		get(_, prop) {
-			return (text: string) => util.styleText(prop as ColorName, text);
+			return (text: string) => styleText(prop as ColorName, text);
 		},
 	});
 }
@@ -41,12 +41,12 @@ The target directory must already exist and contain a package.json.
 When running in a TTY, the CLI will start in interactive mode.
 
 Options:
+  -h, --help                            display this help message
+  -i, --interactive                     force interactive / non-interactive mode
   --prettier [PLUGINS]                  add a Prettier config (comma-separated plugins)
   --eslint                              add an ESLint config
   --stylelint                           add a Stylelint config
-  --husky / --no-husky                  add Husky + lint-staged
-  --interactive / --no-interactive      force interactive / non-interactive mode
-  -h, --help                            display this help message
+  --husky                               add Husky + lint-staged
 
 Available Prettier plugins (omit the value to pick interactively):
 ${getPluginList()}
