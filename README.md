@@ -9,79 +9,77 @@
 Timbic's toolkit for TypeScript projects: the shared configs and linting tools in one package, plus a CLI that wires them into an existing
 project.
 
-## What's included
-
-- [`@timbic/prettier-config`](https://github.com/Timbic/prettier-config)
-- [`@timbic/eslint-config`](https://github.com/Timbic/eslint-config)
-- [`@timbic/stylelint-config`](https://github.com/Timbic/stylelint-config)
-- [`husky`](https://github.com/typicode/husky) and [`lint-staged`](https://github.com/okonet/lint-staged)
-- `core-utils` — a CLI that sets all of the above up in an existing project
-
-## Installation
+## Usage
 
 ```bash
 pnpm add -D @timbic/core-utils
 ```
 
+> **Important:** When using pnpm, don't forget to hoist this tools to the top level in `pnpm-workspace.yaml`:
+>
+> ```yaml
+> publicHoistPattern:
+>     - eslint
+>     - husky
+>     - lint-staged
+>     - prettier
+>     - stylelint
+> ```
+>
+> Alternatively, install them as dev dependencies:
+>
+> ```bash
+> pnpm add -D eslint husky lint-staged prettier stylelint
+> ```
+
+Then run:
+
+```bash
+core-utils [DIRECTORY]
+```
+
+> You can use `.` for the project directory to scaffold in the current directory.
+
+This will trigger interactive cli to wire up all this tools into the existing project.
+
+## What's included
+
+- [Prettier](https://www.npmjs.com/package/prettier) - Widely used opinionated code formatter.
+- [ESLint](https://www.npmjs.com/package/eslint) - Widely used JS/TS linter.
+- [Stylelint](https://www.npmjs.com/package/stylelin) - Popular CSS linter.
+- [Husky](https://www.npmjs.com/package/husky) - Tool which automatically lint commit messages, code, and run tests upon committing or
+  pushing.
+- [lint-staged](https://www.npmjs.com/package/lint-staged) - Task-runner for staged git files.
+
 ## CLI
 
 ```bash
-core-utils <directory> [options]
+core-utils [DIRECTORY] [OPTIONS]...
 ```
 
-The target directory must exist and contain a `package.json`. Use `.` for the current directory. In a TTY the CLI asks for anything you
-didn't pass as a flag.
-
-> The generated configs import the `@timbic/*-config` packages directly, so install this package in the target project (or use the
-> equivalent package manager command) to make them resolvable.
-
-### What it does
-
-- Writes `prettier.config.ts`, `eslint.config.ts` and/or `stylelint.config.ts` using the included configs.
-- With `--husky`, runs `husky init`, replaces `.husky/pre-commit` with `lint-staged`, adds `"prepare": "husky"` and a `lint-staged` section
-  to the existing `package.json` (preserving its indentation).
-- Only adds `prettier --write`, `eslint --fix` and `stylelint --fix` to `lint-staged` for tools you enabled.
-
-### Options
-
-| Option                             | Description                                                    |
-| ---------------------------------- | -------------------------------------------------------------- |
-| `--prettier [PLUGINS]`             | Add a Prettier config. Run `--help` for the available options. |
-| `--eslint`                         | Add an ESLint config.                                          |
-| `--stylelint`                      | Add a Stylelint config.                                        |
-| `--husky / --no-husky`             | Set up Husky + lint-staged.                                    |
-| `--interactive / --no-interactive` | Force interactive / non-interactive mode.                      |
-| `-h, --help`                       | Display the help message.                                      |
-
-### Examples
+The target directory must exist and contain a `package.json`. You can also specify the tools to add directly via additional cli options.
 
 ```bash
-# interactive, current directory
-core-utils .
+# Scaffold tools inside my-project directory ()
+core-utils my-project --prettier=oxc,yaml --husky
 
-# Prettier + ESLint
-core-utils my-app --prettier --eslint
+# Also can be used without installing
 
-# everything, no prompts
-core-utils my-app --prettier --eslint --stylelint --husky --no-interactive
+# Scaffold tools inside current directory
+pnx core-utils . --eslint --stylelint --husky
 ```
 
-You can also run it without installing:
+## Options
 
-```bash
-pnpm dlx @timbic/core-utils my-app --husky
-```
+| Option                 | Description                 |
+| ---------------------- | --------------------------- |
+| `-h`, `--help`         | Display the help message.   |
+| `-i`, `--interactive`  | Force interactive mode.     |
+| `--prettier [PLUGINS]` | Add a Prettier config.      |
+| `--eslint`             | Add an ESLint config.       |
+| `--stylelint`          | Add a Stylelint config.     |
+| `--husky`              | Set up Husky + lint-staged. |
 
-## Development
+## License
 
-- Install dependencies:
-
-```bash
-pnpm install
-```
-
-- Build the library:
-
-```bash
-pnpm run build
-```
+Released under the [MIT License](./LICENSE).
