@@ -17,7 +17,7 @@ const args = mri<{
 }>(process.argv.slice(2), {
 	string: ["prettier", "eslint", "stylelint"],
 	boolean: ["husky", "interactive", "help"],
-	alias: { h: "help" },
+	alias: { h: "help", i: "interactive" },
 });
 
 // Main function

@@ -51,7 +51,7 @@
 	"dependencies": {
 		"@timbic/eslint-config": "^1.2.5",
 		"@timbic/prettier-config": "^2.0.4",
-		"@timbic/stylelint-config": "1.1.0",
+		"@timbic/stylelint-config": "^1.1.0",
 		"husky": "^9.1.7",
 		"lint-staged": "^17.6.2"
 	},
